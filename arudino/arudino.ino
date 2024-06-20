@@ -1,4 +1,6 @@
 
+const int cooldownSeconds = 6 * 1000;
+
 const int buttonPinOne = 6;  
 const int buttonPinTwo = 5;  
 const int ledOne = 10;
@@ -7,7 +9,7 @@ const int ledTwo = 9;
 int buttonStateOne = 0;
 int buttonStateTwo = 0;  
 
-long lastPressed = -(10 * 1000);  
+long lastPressed = -cooldownSeconds;  
 
 void setup() {
   pinMode(buttonPinOne, INPUT);
@@ -28,7 +30,7 @@ void loop() {
   buttonStateTwo = digitalRead(buttonPinTwo);
 
   // check if the button is pressed and it's been more than 2 seconds since the last press
-  if ((buttonStateOne == HIGH || buttonStateTwo == HIGH) && (millis() - lastPressed >= 10 * 1000)) {
+  if ((buttonStateOne == HIGH || buttonStateTwo == HIGH) && (millis() - lastPressed >= cooldownSeconds)) {
     // send a signal to Python via serial communication
     Serial.println("pressed");
 
@@ -39,7 +41,7 @@ void loop() {
     digitalWrite(ledTwo, LOW);
   } 
 
-  if (millis() - lastPressed >= 10 * 1000) {
+  if (millis() - lastPressed >= cooldownSeconds) {
     digitalWrite(ledOne, HIGH);
     digitalWrite(ledTwo, HIGH);
   }
