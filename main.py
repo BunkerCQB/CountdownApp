@@ -5,11 +5,15 @@ from pygame import mixer
 import serial
 import serial.tools.list_ports
 import threading
+import os
+from PIL import Image, ImageTk
+from tkinter import messagebox
+
 
 mixer.init()
 
 class Config:
-    DURATION = 600
+    DURATION = 900
 
 class CountdownApp:
     def __init__(self, root):
@@ -17,6 +21,12 @@ class CountdownApp:
         self.root.title("The Bunker CQB Countdown")
         self.root.configure(bg='black')
         self.root.geometry("800x600")
+
+        self.log_file = f"log_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log"
+
+        img = Image.open("luke.jpg")
+        img = img.resize((20, 20))  # Resize the image as needed
+        self.photo = ImageTk.PhotoImage(img)
 
         icon_path = 'icon.ico'
         self.root.iconbitmap(icon_path)
@@ -103,16 +113,16 @@ class CountdownApp:
         self.trace_log.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.config(command=self.trace_log.yview)
 
-        # Connection Button
-        self.connection_button = tk.Button(root, text="Disconnected", command=self.show_connection_menu, anchor='se',
-                                           bg='black', fg='white')
+        self.connection_button = tk.Button(root, image=self.photo, command=self.show_connection_menu, anchor='se', bg='black')
         self.connection_button.pack(side=tk.RIGHT, padx=10, pady=10)
 
         self.port = self.find_arduino_port()
 
         self.update_timer()
 
-
+    def show_connection_menu(self):
+            # Show a messagebox with the text "I'm Luke"
+            messagebox.showinfo("im luke")
 
     def play_intro(self):
         self.update_time_left(None)
@@ -168,19 +178,21 @@ class CountdownApp:
         if self.running:
             self.insert_log("Timer stopped")
         else:
-            if not self.first_warning_id and not self.intro_id:
-                self.insert_log("Manually stopped the game!", 'orange')
-                
             if self.intro_id:
                 self.insert_log("Cancelling intro", 'red')
                 self.root.after_cancel(self.intro_id)
                 self.intro_id = None
 
+            if not self.first_warning_id:
+                self.insert_log("Manually stopped the round!", 'orange')
+
+
+            if self.first_warning_id:
+                self.insert_log("Round stopped by death button!", "orange")
+                self.first_warning_id = None
 
             mixer.music.load("./sounds/nsl_dead_buzzer_2.mp3")
             mixer.music.play()
-
-            self.first_warning_id = None
 
     def validate_time_entry(self, new_value):
         if new_value.isdigit() or new_value == "":
@@ -227,16 +239,10 @@ class CountdownApp:
                 self.stop_button.config(state=tk.DISABLED, bg=self.button_colors['stop']['disabled'])
                 self.time_left = Config.DURATION
                 self.timer_id = None
+                self.intro_id = None
+                self.button_active_id = None
+                self.first_warning_id = None
 
-    def show_connection_menu(self):
-        menu = tk.Menu(self.root, tearoff=0)
-        menu.add_command(label="Reconnect", command=self.reconnect)
-        menu.post(self.root.winfo_pointerx(), self.root.winfo_pointery())
-
-    def reconnect(self):
-        self.insert_log("Reconnecting...")
-        self.connection_button.config(text="Connected")
-        self.insert_log("Reconnected")
 
     def get_current_time(self):
         now = datetime.now()
@@ -277,7 +283,11 @@ class CountdownApp:
     def insert_log(self, text, color = 'white'):
         self.trace_log.insert(tk.END, f"{self.get_current_time()} - {text}")
         self.trace_log.itemconfig(tk.END, {'fg': color})
-        self.trace_log.yview(tk.END)    
+        self.trace_log.yview(tk.END)  
+
+        log_path = os.path.join("logs", self.log_file)
+        with open(log_path, 'a') as log_file:
+            log_file.write(f"{self.get_current_time()} - {text}\n")  
     
     def activate_button(self):
         self.insert_log("Dead Buttons are now activated!", 'orange')
@@ -310,15 +320,16 @@ class CountdownApp:
         while self.serial_connection and self.serial_connection.is_open:
             try:
                 data = self.serial_connection.readline().strip().decode('utf-8')
-                print(data)
                 if data == 'red' or data == 'blue':
                     if self.buttons_active:
-                        self.insert_log(f"{data} button has been clicked!", "purple")
-                        self.play_first_warning()
+                        if not self.first_warning_id:
+                            self.insert_log(f"{data.upper()} button has been clicked!", "purple")
+                            self.play_first_warning()
+                        else:
+                            self.insert_log(f"{data.upper()} tried click button but it already has been clicked!", "red")
 
                     else:
                         self.insert_log(f"{data} button has been clicked but buttons are not yet active!", "purple")
-
             except Exception as e:
                 self.insert_log(f"Error: {e}", "red")
                 break
