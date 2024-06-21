@@ -1,27 +1,37 @@
 import tkinter as tk
 from tkinter.font import Font
 from datetime import datetime
+from pygame import mixer
+from time import sleep
+import serial.tools.list_ports
 
+mixer.init()
 
 class Config:
-    DURATION = 5
+    DURATION = 600
+    FONT_PATH = "digital-7 (mono).ttf"
 
 
 class CountdownApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Countdown Timer")
+        self.root.title("The Bunker CQB Countdown")
         self.root.configure(bg='black')
         self.root.geometry("800x600")
 
+        icon_path = 'icon.ico'
+        self.root.iconbitmap(icon_path)
+
         self.time_left = Config.DURATION
         self.running = False
+
         self.timer_id = None
+        self.intro_id = None
+        self.button_active_id = None
 
         self.override = False
 
-        # Load the Consolas font for the timer label
-        self.custom_font = Font(family="Consolas", size=72)
+        self.custom_font = Font(family="Helvetica", size=72, weight="bold")
 
         # Define button colors
         self.button_colors = {
@@ -30,19 +40,40 @@ class CountdownApp:
             'reset': {'normal': 'orange', 'active': '#9c6f3c', 'disabled': '#808080'}
         }
 
-        # Timer Label (Entry widget)
+        self.entry_frame = tk.Frame(root, bg='#1c1c1c')
+        self.entry_frame.pack(fill=tk.X)  # Make the frame span horizontally
+
+        # Configure grid columns to expand
+        self.entry_frame.columnconfigure(0, weight=1)  # Expand first column
+        self.entry_frame.columnconfigure(1, weight=0)  # Second column (colon label) doesn't expand
+        self.entry_frame.columnconfigure(2, weight=1)  # Expand third column
+
+        # Minutes Entry
+        self.minutes_entry = tk.Entry(self.entry_frame, font=self.custom_font, fg='red', bg='#1c1c1c',
+                                      justify='right', bd=0, insertbackground='red', width=2, disabledforeground='red', disabledbackground='#1c1c1c')
+        self.minutes_entry.grid(row=0, column=0, padx=(10, 2), pady=10, sticky='ew')  # Center horizontally
+
         vcmd = (self.root.register(self.validate_time_entry), '%P')
-        self.timer_label = tk.Entry(self.root, font=self.custom_font, fg='red', bg='#1c1c1c',
-                                    readonlybackground='#1c1c1c', justify='center', bd=0, insertbackground='red',
-                                    validate='key', validatecommand=vcmd)
-                                    
-        self.timer_label.pack(fill=tk.X, ipadx=20, ipady=20)
+        self.minutes_entry.config(validate='key', validatecommand=vcmd)
+        self.minutes_entry.bind("<FocusOut>", self.update_time_left)
+
+        # Colon Label
+        self.colon_label = tk.Label(self.entry_frame, text=":", font=self.custom_font, fg='red', bg='#1c1c1c', width=1)
+        self.colon_label.grid(row=0, column=1, pady=10)
+
+        # Seconds Entry
+        self.seconds_entry = tk.Entry(self.entry_frame, font=self.custom_font, fg='red', bg='#1c1c1c',
+                                      justify='left', bd=0, insertbackground='red', width=2, disabledforeground='red', disabledbackground='#1c1c1c')
+        self.seconds_entry.grid(row=0, column=2, padx=(2, 10), pady=10, sticky='ew')
+
+        self.seconds_entry.config(validate='key', validatecommand=vcmd)
+        self.seconds_entry.bind("<FocusOut>", self.update_time_left)
 
         # Buttons Frame
         self.buttons_frame = tk.Frame(root, bg='black')
         self.buttons_frame.pack(pady=20)
 
-        self.start_button = tk.Button(self.buttons_frame, text="Start", command=self.start_timer, font=("Helvetica", 14),
+        self.start_button = tk.Button(self.buttons_frame, text="Start", command=self.play_intro, font=("Helvetica", 14),
                                       width=10, height=2, bg=self.button_colors['start']['normal'], fg='white',
                                       activeforeground="white", activebackground=self.button_colors['start']['active'])
         self.start_button.grid(row=0, column=0, padx=10, pady=10)
@@ -60,7 +91,7 @@ class CountdownApp:
 
         # Trace Log Listbox with Scrollbar
         self.trace_log = tk.Listbox(root, bg='#1c1c1c', fg='white', height=10, bd=2, relief='solid',
-                                    highlightcolor='#fe8500', highlightbackground='#fe8500')
+                                    highlightcolor='#fe8500', highlightbackground='#fe8500', font=('Helvetica', 14))
         self.trace_log.pack(fill=tk.BOTH, padx=10, pady=10, expand=True)
 
         self.scrollbar = tk.Scrollbar(self.trace_log, orient=tk.VERTICAL)
@@ -76,86 +107,109 @@ class CountdownApp:
 
         self.update_timer()
 
-    def validate_time_entry(self, new_value):
-        print(self.running)
-        print(self.override)
-        if self.running or self.override:
-            print("Ovveride")
-            return True
-        
-        # if len(new_value) == 5 and new_value[2] == ":" and new_value.replace(":", "").isdigit():
-        #     print("pass logic")
-        #     return True
 
-        # digits = new_value.replace(":", "")
+    def play_intro(self):
+        self.update_time_left(None)
+        mixer.music.load("./sounds/feet_weapons_siren_nsl_cleaner.mp3")
+        mixer.music.play()
+        self.insert_log("Playing intro...", 'orange')
 
-        # if "0" not in digits:
-        #     print("no zeros")
-        #     return False
+            # Disabled start, edit and enabled stop
+        self.start_button.config(state=tk.DISABLED, bg=self.button_colors['start']['disabled'])
+        self.reset_button.config(state=tk.DISABLED, bg=self.button_colors['reset']['disabled'])
+        self.stop_button.config(state=tk.NORMAL, bg=self.button_colors['stop']['normal'])
 
-        # new_digits = digits[-4:]
-        # self.time_left = self.convert_time_to_total_seconds(new_digits)
-        # self.timer_label.delete(0, tk.END)
-        # self.timer_label.insert(0, self.get_formatted_countdown_time())
+        # Disabled edit the timer
+        self.minutes_entry.config(state='disabled')
+        self.seconds_entry.config(state='disabled')
+
+        self.intro_id = self.root.after(12550, self.start_timer)
 
 
-        # Ensure the new value contains only digits and is at most 4 characters long
-    
+
     def start_timer(self):
         if not self.running:
             self.running = True
-            self.trace_log.insert(tk.END, f"{self.get_current_time()} - Timer started")
-            self.trace_log.yview(tk.END)
-            self.start_button.config(state=tk.DISABLED, bg=self.button_colors['start']['disabled'])
-            self.reset_button.config(state=tk.DISABLED, bg=self.button_colors['reset']['disabled'])
-            self.stop_button.config(state=tk.NORMAL, bg=self.button_colors['stop']['normal'])
+            self.intro_id = None
+
+            self.insert_log("Timer started")
+            self.button_active_id = self.root.after(30 * 1000, self.activate_button)
+
             self.update_timer()
 
     def stop_timer(self):
+        
+        self.running = False
+        if self.timer_id:
+            self.root.after_cancel(self.timer_id)
+            self.timer_id = None
+        self.start_button.config(state=tk.NORMAL, bg=self.button_colors['start']['normal'])
+        self.reset_button.config(state=tk.NORMAL, bg=self.button_colors['reset']['normal'])
+        self.stop_button.config(state=tk.DISABLED, bg=self.button_colors['stop']['disabled'])
+
+        # Enabled edit the timer
+        self.minutes_entry.config(state='normal')
+        self.seconds_entry.config(state='normal')
+    
+        
         if self.running:
-            self.running = False
-            if self.timer_id:
-                self.root.after_cancel(self.timer_id)
-                self.timer_id = None
-            self.trace_log.insert(tk.END, f"{self.get_current_time()} - Timer stopped")
-            self.trace_log.yview(tk.END)
-            self.start_button.config(state=tk.NORMAL, bg=self.button_colors['start']['normal'])
-            self.reset_button.config(state=tk.NORMAL, bg=self.button_colors['reset']['normal'])
-            self.stop_button.config(state=tk.DISABLED, bg=self.button_colors['stop']['disabled'])
-            self.timer_label.config(state='normal')
+            self.insert_log("Timer stopped")
+        else:
+            if self.intro_id:
+                self.insert_log("Cancelling intro", 'red')
+                self.root.after_cancel(self.intro_id)
+                self.intro_id = None
+
+            self.insert_log("Manually stopped the game!", 'orange')
+
+            mixer.music.load("./sounds/nsl_dead_buzzer_2.mp3")
+            mixer.music.play()
+
+    def validate_time_entry(self, new_value):
+        if new_value.isdigit() or new_value == "":
+            return len(new_value) <= 2  # Limit input to 2 characters (for minutes and seconds)
+        else:
+            return False
+
+    def update_time_left(self, event):
+        minutes_text = self.minutes_entry.get()
+        seconds_text = self.seconds_entry.get()
+
+        try:
+            minutes = int(minutes_text) if minutes_text else 0
+            seconds = int(seconds_text) if seconds_text else 0
+            self.time_left = minutes * 60 + seconds
+            self.update_timer_label()
+        except ValueError:
+            pass 
 
     def reset_timer(self):
         self.time_left = Config.DURATION
-        self.timer_label.config(state='normal')
-        self.change_timer_label(self.get_formatted_countdown_time())
-        self.timer_label.config(state='readonly')
-        self.trace_log.insert(tk.END, f"{self.get_current_time()} - Timer reset")
-        self.trace_log.yview(tk.END)
-        self.start_button.config(state=tk.NORMAL, bg=self.button_colors['start']['normal'])
-        self.stop_button.config(state=tk.DISABLED, bg=self.button_colors['stop']['disabled'])
+        self.update_timer_label()
+        self.insert_log("Timer reset")
 
     def update_timer(self):
-        print(self.get_formatted_countdown_time())
-        self.change_timer_label(self.get_formatted_countdown_time())
-w
+        self.update_timer_label()
+
         if self.running:
             if self.time_left > 0:
                 self.time_left -= 1
+                print("Time left:", self.time_left)
                 self.timer_id = self.root.after(1000, self.update_timer)
             else:
                 self.running = False
-                self.trace_log.insert(tk.END, f"{self.get_current_time()} - Timer finished")
-                self.trace_log.yview(tk.END)
+
+                # Play the sound file
+                mixer.music.load("./sounds/nsl_dead_buzzer_2.mp3")
+                mixer.music.play()
+                self.insert_log("Playing outro...", 'orange')
+
+                self.insert_log("Timer finished")
                 self.start_button.config(state=tk.NORMAL, bg=self.button_colors['start']['normal'])
                 self.reset_button.config(state=tk.NORMAL, bg=self.button_colors['reset']['normal'])
                 self.stop_button.config(state=tk.DISABLED, bg=self.button_colors['stop']['disabled'])
                 self.time_left = Config.DURATION
                 self.timer_id = None
-
-    def get_formatted_countdown_time(self):
-        minutes = self.time_left // 60
-        seconds = self.time_left % 60
-        return f"{minutes:02}:{seconds:02}"
 
     def show_connection_menu(self):
         menu = tk.Menu(self.root, tearoff=0)
@@ -163,10 +217,9 @@ w
         menu.post(self.root.winfo_pointerx(), self.root.winfo_pointery())
 
     def reconnect(self):
-        self.trace_log.insert(tk.END, f"{self.get_current_time()} - Reconnecting...")
+        self.insert_log("Reconnecting...")
         self.connection_button.config(text="Connected")
-        self.trace_log.insert(tk.END, f"{self.get_current_time()} - Reconnected")
-        self.trace_log.yview(tk.END)
+        self.insert_log("Reconnected")
 
     def get_current_time(self):
         now = datetime.now()
@@ -182,12 +235,43 @@ w
         total_seconds = hours * 60 + minutes
 
         return total_seconds
+
+    def update_timer_label(self):
+        # using time left to update the timer label
+        minutes = self.time_left // 60
+        seconds = self.time_left % 60
+
+        if self.running:
+            self.minutes_entry.config(state='normal')
+            self.seconds_entry.config(state='normal')
+
+        self.minutes_entry.delete(0, tk.END)
+        self.minutes_entry.insert(0, f"{minutes:02}")
+
+        self.seconds_entry.delete(0, tk.END)
+        self.seconds_entry.insert(0, f"{seconds:02}")
+
+        if self.running:
+            self.minutes_entry.config(state='disabled')
+            self.seconds_entry.config(state='disabled')
+
+
+
+    def insert_log(self, text, color = 'white'):
+        self.trace_log.insert(tk.END, f"{self.get_current_time()} - {text}")
+        self.trace_log.itemconfig(tk.END, {'fg': color})
+        self.trace_log.yview(tk.END)
+
+    def find_arduino_port(self):
+        ports = serial.tools.list_ports.comports()
+     
+        for port in ports:
+            if 'Arduino Mega' in port.description:  # Adjust this string to match your board's description
+                return port.device
+        return None
     
-    def change_timer_label(self, text):
-        self.override = True
-        self.timer_label.delete(0, tk.END)
-        self.timer_label.insert(0, text)
-        self.override = False
+    def activate_button(self):
+        self.insert_log("Dead Buttons are now activated!", 'green')
 
 
 if __name__ == "__main__":

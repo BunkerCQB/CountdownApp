@@ -4,7 +4,6 @@ const int cooldownSeconds = 6 * 1000;
 const int buttonPinOne = 6;  
 const int buttonPinTwo = 5;  
 const int ledOne = 10;
-const int ledTwo = 9;
 
 int buttonStateOne = 0;
 int buttonStateTwo = 0;  
@@ -16,10 +15,8 @@ void setup() {
   pinMode(buttonPinTwo, INPUT);
 
   pinMode(ledOne, OUTPUT);
-  pinMode(ledTwo, OUTPUT);
   
-  digitalWrite(ledOne, HIGH);  
-  digitalWrite(ledTwo, HIGH);  
+  digitalWrite(ledOne, LOW);  
 
   Serial.begin(9600);
 }
@@ -37,13 +34,11 @@ void loop() {
     // update last pressed time:
     lastPressed = millis();
 
-    digitalWrite(ledOne, LOW);
-    digitalWrite(ledTwo, LOW);
+    digitalWrite(ledOne, HIGH);
   } 
 
   if (millis() - lastPressed >= cooldownSeconds) {
-    digitalWrite(ledOne, HIGH);
-    digitalWrite(ledTwo, HIGH);
+    digitalWrite(ledOne, LOW);
   }
 
   // wait for a short period of time to avoid overwhelming the serial port:
