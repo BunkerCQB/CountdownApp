@@ -1,8 +1,8 @@
 
 const int cooldownSeconds = 6 * 1000;
 
-const int buttonPinOne = 6;  
-const int buttonPinTwo = 5;  
+const int buttonPinOne = 5;  
+const int buttonPinTwo = 6;  
 const int ledOne = 10;
 
 int buttonStateOne = 0;
@@ -29,8 +29,12 @@ void loop() {
   // check if the button is pressed and it's been more than 2 seconds since the last press
   if ((buttonStateOne == HIGH || buttonStateTwo == HIGH) && (millis() - lastPressed >= cooldownSeconds)) {
     // send a signal to Python via serial communication
-    Serial.println("pressed");
-
+    if (buttonStateOne == HIGH) {
+      Serial.println("red");
+    }
+    if (buttonStateTwo == HIGH) {
+      Serial.println("blue");
+    }
     // update last pressed time:
     lastPressed = millis();
 

@@ -2,15 +2,14 @@ import tkinter as tk
 from tkinter.font import Font
 from datetime import datetime
 from pygame import mixer
-from time import sleep
+import serial
 import serial.tools.list_ports
+import threading
 
 mixer.init()
 
 class Config:
     DURATION = 600
-    FONT_PATH = "digital-7 (mono).ttf"
-
 
 class CountdownApp:
     def __init__(self, root):
@@ -28,8 +27,12 @@ class CountdownApp:
         self.timer_id = None
         self.intro_id = None
         self.button_active_id = None
+        self.first_warning_id = None
 
-        self.override = False
+        self.buttons_active = False
+
+        self.port = None  # Initialize with None
+        self.serial_connection = None  # Initialize the serial connection
 
         self.custom_font = Font(family="Helvetica", size=72, weight="bold")
 
@@ -105,7 +108,10 @@ class CountdownApp:
                                            bg='black', fg='white')
         self.connection_button.pack(side=tk.RIGHT, padx=10, pady=10)
 
+        self.port = self.find_arduino_port()
+
         self.update_timer()
+
 
 
     def play_intro(self):
@@ -143,6 +149,13 @@ class CountdownApp:
         if self.timer_id:
             self.root.after_cancel(self.timer_id)
             self.timer_id = None
+
+        if self.button_active_id:
+            self.root.after_cancel(self.button_active_id)
+            self.button_active_id = None
+
+        self.buttons_active = False
+
         self.start_button.config(state=tk.NORMAL, bg=self.button_colors['start']['normal'])
         self.reset_button.config(state=tk.NORMAL, bg=self.button_colors['reset']['normal'])
         self.stop_button.config(state=tk.DISABLED, bg=self.button_colors['stop']['disabled'])
@@ -155,15 +168,19 @@ class CountdownApp:
         if self.running:
             self.insert_log("Timer stopped")
         else:
+            if not self.first_warning_id and not self.intro_id:
+                self.insert_log("Manually stopped the game!", 'orange')
+                
             if self.intro_id:
                 self.insert_log("Cancelling intro", 'red')
                 self.root.after_cancel(self.intro_id)
                 self.intro_id = None
 
-            self.insert_log("Manually stopped the game!", 'orange')
 
             mixer.music.load("./sounds/nsl_dead_buzzer_2.mp3")
             mixer.music.play()
+
+            self.first_warning_id = None
 
     def validate_time_entry(self, new_value):
         if new_value.isdigit() or new_value == "":
@@ -260,18 +277,63 @@ class CountdownApp:
     def insert_log(self, text, color = 'white'):
         self.trace_log.insert(tk.END, f"{self.get_current_time()} - {text}")
         self.trace_log.itemconfig(tk.END, {'fg': color})
-        self.trace_log.yview(tk.END)
+        self.trace_log.yview(tk.END)    
+    
+    def activate_button(self):
+        self.insert_log("Dead Buttons are now activated!", 'orange')
+        self.button_active_id = None
+        self.buttons_active = True
 
     def find_arduino_port(self):
         ports = serial.tools.list_ports.comports()
-     
-        for port in ports:
-            if 'Arduino Mega' in port.description:  # Adjust this string to match your board's description
-                return port.device
+        self.insert_log("Trying to find COM port!")
+        if ports:
+            port = ports[0]  # Select the first available COM port
+            self.insert_log(f"COM port found: {port.device}", "green")
+            self.connect_to_arduino(port.device)
+            return port.device
+    
+        self.insert_log("COM port not found!", "red")
+        self.insert_log("Please try fix & reopen the program", "red")
         return None
     
-    def activate_button(self):
-        self.insert_log("Dead Buttons are now activated!", 'green')
+    def connect_to_arduino(self, port):
+        try:
+            self.serial_connection = serial.Serial(port, 9600)
+            self.insert_log(f"Connected to {port}", "green")
+            threading.Thread(target=self.read_from_serial, daemon=True).start()
+        except Exception as e:
+            self.insert_log(f"Failed to connect: {e}", "red")
+
+    def read_from_serial(self):
+        self.insert_log("Listening for data from serial", "green")
+        while self.serial_connection and self.serial_connection.is_open:
+            try:
+                data = self.serial_connection.readline().strip().decode('utf-8')
+                print(data)
+                if data == 'red' or data == 'blue':
+                    if self.buttons_active:
+                        self.insert_log(f"{data} button has been clicked!", "purple")
+                        self.play_first_warning()
+
+                    else:
+                        self.insert_log(f"{data} button has been clicked but buttons are not yet active!", "purple")
+
+            except Exception as e:
+                self.insert_log(f"Error: {e}", "red")
+                break
+
+    def play_first_warning(self):
+        self.insert_log("Playing first warning", "orange")
+        self.insert_log("Round will end in 3 seconds!", "orange")
+
+        mixer.music.load("./sounds/nsl_dead_buzzer_1.mp3")
+        mixer.music.play()
+
+        self.first_warning_id = self.root.after(4000, self.stop_timer)
+
+
+
 
 
 if __name__ == "__main__":
