@@ -27,7 +27,7 @@ void loop() {
   buttonStateOne = digitalRead(buttonPinOne);
   buttonStateTwo = digitalRead(buttonPinTwo);
 
-  if (irrecv.decode(&results) && (millis() - lastPressed >= 300)) {
+  if (irrecv.decode(&results) && (millis() - lastPressed >= cooldownSeconds)) {
     Serial.println("signal");
     lastPressed = millis();
     irrecv.resume(); // Receive the next value

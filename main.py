@@ -28,7 +28,9 @@ class CountdownApp:
         self.root.iconbitmap(icon_path)
 
         self.time_left = Config.DURATION
+        
         self.running = False
+        self.intro_running = False
 
         self.timer_id = None
         self.intro_id = None
@@ -114,6 +116,7 @@ class CountdownApp:
         self.update_timer()
 
     def play_intro(self):
+        self.intro_running = True
         self.update_time_left(None)
         mixer.music.load("./sounds/feet_weapons_siren_nsl_cleaner.mp3")
         mixer.music.play()
@@ -131,6 +134,8 @@ class CountdownApp:
         self.intro_id = self.root.after(12550, self.start_timer)
 
     def start_timer(self):
+        self.intro_running = False
+
         if not self.running:
             self.running = True
             self.intro_id = None
@@ -324,13 +329,16 @@ class CountdownApp:
                 elif data == "signal":
                     self.insert_log("Signal received from remote!", "blue")
 
-                    if not self.running:
-                        self.time_left = 900
-                        self.play_intro()
-                    
                     if self.running:
                         self.stop_timer()
 
+                    if not self.running:
+                        if self.intro_running:
+                            self.root.after_cancel(self.intro_id)
+
+                        self.time_left = 300
+                        self.running = True
+                        self.play_intro()
                     
             except Exception as e:
                 self.insert_log(f"Error: {e}", "red")
