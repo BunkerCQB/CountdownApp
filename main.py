@@ -332,12 +332,17 @@ class CountdownApp:
                     if self.running:
                         self.stop_timer()
 
-                    if not self.running:
+                    if not self.running and not self.intro_running:
+                        self.time_left = 300
+                        self.play_intro()
+
+                    if self.intro_running and not self.running:
                         if self.intro_running:
                             self.root.after_cancel(self.intro_id)
 
+
+                        self.stop_timer()
                         self.time_left = 300
-                        self.running = True
                         self.play_intro()
                     
             except Exception as e:
