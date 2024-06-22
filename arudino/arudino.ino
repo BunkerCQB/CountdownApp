@@ -1,6 +1,6 @@
 #include <IRremote.h>
 
-const int cooldownSeconds = 1 * 1000;
+const int cooldownSeconds = 2 * 1000;
 
 const int buttonPinOne = 5;  
 const int buttonPinTwo = 6;  

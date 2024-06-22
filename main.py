@@ -146,8 +146,9 @@ class CountdownApp:
             self.update_timer()
 
     def stop_timer(self):
-        
+        self.intro_running = False
         self.running = False
+
         if self.timer_id:
             self.root.after_cancel(self.timer_id)
             self.timer_id = None
@@ -177,7 +178,6 @@ class CountdownApp:
 
             if not self.first_warning_id:
                 self.insert_log("Manually stopped the round!", "orange")
-
 
             if self.first_warning_id:
                 self.insert_log("Round stopped by death button!", "orange")
@@ -329,15 +329,7 @@ class CountdownApp:
                 elif data == "signal":
                     self.insert_log("Signal received from remote!", "blue")
 
-                    if self.intro_running:
-                        if self.intro_id:
-                            self.root.after_cancel(self.intro_id)
-                            self.intro_id = None
-                            self. intro_running = False
-                            self.insert_log("Cancelling intro from remote", "red")
-                            mixer.music.load("./sounds/nsl_dead_buzzer_2.mp3")
-                            mixer.music.play()
-                    elif self.running:
+                    if self.intro_running or self.running:
                         self.stop_timer()
                     else:
                         self.time_left = 180
