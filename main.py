@@ -210,7 +210,6 @@ class CountdownApp:
         if self.running:
             if self.time_left > 0:
                 self.time_left -= 1
-                print("Time left:", self.time_left)
                 self.timer_id = self.root.after(1000, self.update_timer)
             else:
                 self.running = False
@@ -225,6 +224,13 @@ class CountdownApp:
                 self.reset_button.config(state=tk.NORMAL, bg=self.button_colors["reset"]["normal"])
                 self.stop_button.config(state=tk.DISABLED, bg=self.button_colors["stop"]["disabled"])
                 self.time_left = Config.DURATION
+
+                if self.button_active_id:
+                    self.root.after_cancel(self.button_active_id)
+
+                if self.first_warning_id:
+                    self.root.after_cancel(self.first_warning_id)
+
                 self.timer_id = None
                 self.intro_id = None
                 self.button_active_id = None
@@ -314,7 +320,7 @@ class CountdownApp:
                             self.insert_log(f"{data.upper()} tried click button but it already has been clicked!", "red")
 
                     else:
-                        self.insert_log(f"{data} button has been clicked but buttons are not yet active!", "purple")
+                        self.insert_log(f"{data.upper()} button has been clicked but buttons are not yet active!", "purple")
             except Exception as e:
                 self.insert_log(f"Error: {e}", "red")
                 break
