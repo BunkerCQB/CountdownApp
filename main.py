@@ -321,6 +321,17 @@ class CountdownApp:
 
                     else:
                         self.insert_log(f"{data.upper()} button has been clicked but buttons are not yet active!", "purple")
+                elif data == "signal":
+                    self.insert_log("Signal received from remote!", "blue")
+
+                    if not self.running:
+                        self.time_left = 900
+                        self.play_intro()
+                    
+                    if self.running:
+                        self.stop_timer()
+
+                    
             except Exception as e:
                 self.insert_log(f"Error: {e}", "red")
                 break
