@@ -329,22 +329,22 @@ class CountdownApp:
                 elif data == "signal":
                     self.insert_log("Signal received from remote!", "blue")
 
-                    if self.running:
-                        self.stop_timer()
-
-                    if not self.running and not self.intro_running:
-                        self.time_left = 300
-                        self.play_intro()
-
-                    if self.intro_running and not self.running:
-                        if self.intro_running:
+                    if self.intro_running:
+                        if self.intro_id:
                             self.root.after_cancel(self.intro_id)
-
-
+                            self.intro_id = None
+                            self. intro_running = False
+                            self.insert_log("Cancelling intro from remote", "red")
+                            mixer.music.load("./sounds/nsl_dead_buzzer_2.mp3")
+                            mixer.music.play()
+                    elif self.running:
                         self.stop_timer()
-                        self.time_left = 300
+                    else:
+                        self.time_left = 180
+                        self.update_timer_label()
                         self.play_intro()
-                    
+
+                
             except Exception as e:
                 self.insert_log(f"Error: {e}", "red")
                 break
