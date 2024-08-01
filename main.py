@@ -13,7 +13,7 @@ from tkinter import PhotoImage
 mixer.init()
 
 class Config:
-    DURATION = 900
+    DURATION = 180 # 3 minutes
 
 class CountdownApp:
     def __init__(self, root):
@@ -21,8 +21,6 @@ class CountdownApp:
         self.root.title("The Bunker CQB Countdown")
         self.root.configure(bg="black")
         self.root.geometry("800x600")
-
-        self.log_file = f"log_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log"
 
         icon_path = "icon.ico"
         self.root.iconbitmap(icon_path)
@@ -122,7 +120,7 @@ class CountdownApp:
         mixer.music.play()
         self.insert_log("Playing intro...", "orange")
 
-            # Disabled start, edit and enabled stop
+        # Disabled start, edit and enabled stop
         self.start_button.config(state=tk.DISABLED, bg=self.button_colors["start"]["disabled"])
         self.reset_button.config(state=tk.DISABLED, bg=self.button_colors["reset"]["disabled"])
         self.stop_button.config(state=tk.NORMAL, bg=self.button_colors["stop"]["normal"])
@@ -241,6 +239,9 @@ class CountdownApp:
                 self.button_active_id = None
                 self.first_warning_id = None
 
+                self.minutes_entry.config(state="normal")
+                self.seconds_entry.config(state="normal")
+
 
     def get_current_time(self):
         now = datetime.now()
@@ -280,10 +281,6 @@ class CountdownApp:
         self.trace_log.insert(tk.END, f"{self.get_current_time()} - {text}")
         self.trace_log.itemconfig(tk.END, {"fg": color})
         self.trace_log.yview(tk.END)  
-
-        log_path = os.path.join("logs", self.log_file)
-        with open(log_path, "a") as log_file:
-            log_file.write(f"{self.get_current_time()} - {text}\n")  
     
     def activate_button(self):
         self.insert_log("Dead Buttons are now activated!", "orange")
