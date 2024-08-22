@@ -1,48 +1,36 @@
-#include <IRremote.h>
-
-const int cooldownSeconds = 2 * 1000;
-
 const int buttonPinOne = 5;  
 const int buttonPinTwo = 6;  
-const int irPin = 3;
+
+int prevButtonStateOne = 0;
+int prevButtonStateTwo = 0;
 
 int buttonStateOne = 0;
 int buttonStateTwo = 0;  
 
-long lastPressed = -cooldownSeconds;
-
-IRrecv irrecv(irPin);
-decode_results results;
+int delayTime = 1;
 
 void setup() {
-  pinMode(buttonPinOne, INPUT);
-  pinMode(buttonPinTwo, INPUT);  
+	pinMode(buttonPinOne, INPUT);
+	pinMode(buttonPinTwo, INPUT);  
 
-  Serial.begin(9600);
-
-  irrecv.enableIRIn(); // Start the IR receiver
+	Serial.begin(9600);
 }
 
 void loop() {
-  buttonStateOne = digitalRead(buttonPinOne);
-  buttonStateTwo = digitalRead(buttonPinTwo);
+	buttonStateOne = digitalRead(buttonPinOne);
+	buttonStateTwo = digitalRead(buttonPinTwo);
 
-  if (irrecv.decode(&results) && (millis() - lastPressed >= cooldownSeconds)) {
-    Serial.println("signal");
-    lastPressed = millis();
-    irrecv.resume(); // Receive the next value
-  }
+	if(buttonStateOne == HIGH && prevButtonStateOne == 0)
+	{
+		Serial.println("red");
+	}
+	prevButtonStateOne = buttonStateOne;
 
-  if ((buttonStateOne == HIGH || buttonStateTwo == HIGH) && (millis() - lastPressed >= cooldownSeconds)) {
-    if (buttonStateOne == HIGH) {
-      Serial.println("red");
-    }
-    if (buttonStateTwo == HIGH) {
-      Serial.println("blue");
-    }
+	if(buttonStateTwo == HIGH && prevButtonStateTwo == 0)
+	{
+		Serial.println("blue");
+	}
+	prevButtonStateTwo = buttonStateTwo;
 
-    lastPressed = millis();
-  } 
-
-  delay(100);
+	delay(delayTime * 100);
 }
