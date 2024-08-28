@@ -308,10 +308,12 @@ class CountdownApp:
         ports = serial.tools.list_ports.comports()
         self.insert_log("Trying to find COM port!")
         if ports:
-            port = ports[0]  # Select the first available COM port
-            self.insert_log(f"COM port found: {port.device}", "green")
-            self.connect_to_arduino(port.device)
-            return port.device
+            for p in ports:
+             if "Arduino" in p.description:
+                port = p  # Select the first available COM port
+                self.insert_log(f"COM port found: {port.device}", "green")
+                self.connect_to_arduino(port.device)
+                return port.device
     
         self.insert_log("COM port not found!", "red")
         self.insert_log("Please try fix & reopen the program", "red")
@@ -340,14 +342,6 @@ class CountdownApp:
 
                     else:
                         self.insert_log(f"{data.upper()} button has been clicked but buttons are not yet active!", "purple")
-
-                    if self.intro_running or self.running:
-                        self.stop_timer()
-                    else:
-                        self.time_left = 180
-                        self.update_timer_label()
-                        self.play_intro()
-
                 
             except Exception as e:
                 self.insert_log(f"Error: {e}", "red")
