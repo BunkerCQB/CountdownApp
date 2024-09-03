@@ -173,6 +173,7 @@ class CountdownApp:
             self.button_active_id = None
 
         self.buttons_active = False
+        self.first_warning_id = None
 
         self.start_button.config(state=tk.NORMAL, bg=self.button_colors["start"]["normal"])
         self.reset_button.config(state=tk.NORMAL, bg=self.button_colors["reset"]["normal"])
