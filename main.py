@@ -13,8 +13,8 @@ from tkinter import PhotoImage
 mixer.init()
 
 class Config:
-    DURATION = 180 #Seconds
-    DEAD_BUZZER_TIMER = 5 #Seconds
+    DURATION = 180  #Seconds
+    DEAD_BUZZER_TIMER = 6 #Seconds
 
 class CountdownApp:
     def __init__(self, root):
@@ -333,6 +333,8 @@ class CountdownApp:
         while self.serial_connection and self.serial_connection.is_open:
             try:
                 data = self.serial_connection.readline().strip().decode("utf-8")
+                self.insert_log(data, "yellow")
+                
                 if data == "Left" or data == "Right":
                     if self.buttons_active:
                         if not self.first_warning_id:
@@ -343,6 +345,15 @@ class CountdownApp:
 
                     else:
                         self.insert_log(f"{data.upper()} button has been clicked but buttons are not yet active!", "purple")
+                        
+                if data == "Start" and not self.running and not self.intro_running:
+                    self.reset_timer()
+                    self.play_intro()
+                    self.insert_log(f"Started from Practice Buttons!", "green")
+                    
+                if data == "End" and (self.running or self.intro_running):
+                    self.stop_timer()
+                    self.insert_log(f"Ended from Practice Buttons!", "red")
                 
             except Exception as e:
                 self.insert_log(f"Error: {e}", "red")
