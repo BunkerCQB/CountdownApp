@@ -167,6 +167,14 @@ class CountdownApp:
         self.update_time_left(None)
         mixer.music.load("./sounds/Start.mp3")
         mixer.music.play()
+        # Disabled start, edit and enabled stop
+        self.start_button.config(state=tk.DISABLED, bg=self.button_colors["start"]["disabled"])
+        self.reset_button.config(state=tk.DISABLED, bg=self.button_colors["reset"]["disabled"])
+        self.stop_button.config(state=tk.NORMAL, bg=self.button_colors["stop"]["normal"])
+
+        # Disabled edit the timer
+        self.minutes_entry.config(state="disabled")
+        self.seconds_entry.config(state="disabled")
         self.intro_running = False
 
         if not self.running:
@@ -211,7 +219,9 @@ class CountdownApp:
                 self.intro_id = None
 
             if not self.first_warning_id:
-                self.insert_log("Round Over!", "orange")
+                minutes = self.time_left // 60
+                seconds = self.time_left % 60
+                self.insert_log(f"Round Over! - Timer: {self.minutes_entry.get()}:{self.seconds_entry.get()}", "orange")
 
             mixer.music.load("./sounds/3BeepEnd.mp3")
             mixer.music.play()
@@ -249,8 +259,10 @@ class CountdownApp:
                 self.intro_id = None
 
             if not self.first_warning_id:
-                self.insert_log("Round Over!", "orange")
-
+                minutes = self.time_left // 60
+                seconds = self.time_left % 60
+                self.insert_log(f"Round Over! - Timer: {self.minutes_entry.get()}:{self.seconds_entry.get()}", "orange")
+                
             mixer.music.load("./sounds/DeadBuzzerEdit.mp3")
             mixer.music.play()
 
@@ -389,7 +401,7 @@ class CountdownApp:
         while self.serial_connection and self.serial_connection.is_open:
             try:
                 data = self.serial_connection.readline().strip().decode("utf-8")
-                self.insert_log(data, "yellow")
+                #self.insert_log(data, "yellow")
                 
                 if data == "TowelForks" or data == "TowelTunnel":
                     if self.buttons_active:
