@@ -263,7 +263,7 @@ class CountdownApp:
                 seconds = self.time_left % 60
                 self.insert_log(f"Round Over! - Timer: {self.minutes_entry.get()}:{self.seconds_entry.get()}", "orange")
                 
-            mixer.music.load("./sounds/DeadBuzzerEdit.mp3")
+            mixer.music.load("./sounds/Towel.mp3")
             mixer.music.play()
 
     def validate_time_entry(self, new_value):
