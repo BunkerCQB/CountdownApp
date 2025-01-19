@@ -418,6 +418,12 @@ class CountdownApp:
                             self.buzzer_stop()
                         else:
                             self.insert_log(f"{data.upper()} tried click button but it already has been clicked!", "red")
+
+                if data == "Start" and not self.running and not self.intro_running:
+                    self.reset_timer()
+                    self.play_intro()
+                    self.insert_log(f"Started from Practice Buttons!", "green")
+                
                     
             except Exception as e:
                 self.insert_log(f"Error: {e}", "red")
