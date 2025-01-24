@@ -13,10 +13,8 @@ from tkinter import PhotoImage
 mixer.init()
 
 class Config:
-    DURATION = 420  #Seconds
-    DEAD_BUZZER_TIMER = 0 #Seconds
-    ButtonSleepTimer = 0 #Seconds
-
+    DURATION = 180  #Seconds
+    DEAD_BUZZER_TIMER = 6 #Seconds
 
 class CountdownApp:
     def __init__(self, root):
@@ -91,7 +89,7 @@ class CountdownApp:
                                       activeforeground="white", activebackground=self.button_colors["start"]["active"])
         self.start_button.grid(row=0, column=0, padx=10, pady=10)
 
-        self.stop_button = tk.Button(self.buttons_frame, text="Stop", command=self.buzzer_stop, font=("Helvetica", 14),
+        self.stop_button = tk.Button(self.buttons_frame, text="Stop", command=self.stop_timer, font=("Helvetica", 14),
                                      width=10, height=2, bg=self.button_colors["stop"]["normal"], fg="white",
                                      activeforeground="white", activebackground=self.button_colors["stop"]["active"])
         self.stop_button.config(state=tk.DISABLED, bg=self.button_colors["start"]["disabled"])
@@ -107,7 +105,7 @@ class CountdownApp:
                                       activeforeground="white", activebackground=self.button_colors["reset"]["active"])
         self.approve_button.grid(row=0, column=3, padx=10, pady=10)
         
-        self.test_button = tk.Button(self.buttons_frame, text="Start (Instant)", command=self.start_timer_Test, font=("Helvetica", 14),
+        self.test_button = tk.Button(self.buttons_frame, text="Dead Button Test", command=self.play_first_warning, font=("Helvetica", 14),
                                       width=15, height=1, bg=self.button_colors["test_button"]["normal"], fg="white",
                                       activeforeground="white", activebackground=self.button_colors["test_button"]["active"])
         self.test_button.grid(row=1, column=1, columnspan=2, padx=10, pady=10)
@@ -130,7 +128,7 @@ class CountdownApp:
     def play_intro(self):
         self.intro_running = True
         self.update_time_left(None)
-        mixer.music.load("./sounds/20SecondStart.mp3")
+        mixer.music.load("./sounds/30SecondsStart.mp3")
         mixer.music.play()
         self.insert_log("Playing intro...", "green")
 
@@ -143,7 +141,7 @@ class CountdownApp:
         self.minutes_entry.config(state="disabled")
         self.seconds_entry.config(state="disabled")
 
-        self.intro_id = self.root.after(20000, self.start_timer)
+        self.intro_id = self.root.after(30000, self.start_timer)
 
     def play_approval(self):
         mixer.music.load("./sounds/PointApproved.mp3")
@@ -158,35 +156,11 @@ class CountdownApp:
             self.intro_id = None
 
             self.insert_log("Timer started")
-            self.button_active_id = self.root.after(Config.ButtonSleepTimer * 1000, self.activate_button)
+            self.button_active_id = self.root.after(30 * 1000, self.activate_button)
             
             self.update_timer()
 
-    def start_timer_Test(self):
-        self.intro_running = True
-        self.update_time_left(None)
-        mixer.music.load("./sounds/Start.mp3")
-        mixer.music.play()
-        # Disabled start, edit and enabled stop
-        self.start_button.config(state=tk.DISABLED, bg=self.button_colors["start"]["disabled"])
-        self.reset_button.config(state=tk.DISABLED, bg=self.button_colors["reset"]["disabled"])
-        self.stop_button.config(state=tk.NORMAL, bg=self.button_colors["stop"]["normal"])
-
-        # Disabled edit the timer
-        self.minutes_entry.config(state="disabled")
-        self.seconds_entry.config(state="disabled")
-        self.intro_running = False
-
-        if not self.running:
-            self.running = True
-            self.intro_id = None
-
-            self.insert_log("Timer started - skipped countdown")
-            self.button_active_id = self.root.after(Config.ButtonSleepTimer * 1000, self.activate_button)
-            
-            self.update_timer()
-
-    def buzzer_stop(self):
+    def stop_timer(self):
         self.intro_running = False
         self.running = False
 
@@ -219,51 +193,9 @@ class CountdownApp:
                 self.intro_id = None
 
             if not self.first_warning_id:
-                minutes = self.time_left // 60
-                seconds = self.time_left % 60
-                self.insert_log(f"Round Over! - Timer: {self.minutes_entry.get()}:{self.seconds_entry.get()}", "orange")
+                self.insert_log("Round Over!", "orange")
 
             mixer.music.load("./sounds/3BeepEnd.mp3")
-            mixer.music.play()
-
-    def towel_stop(self):
-        self.intro_running = False
-        self.running = False
-
-        if self.timer_id:
-            self.root.after_cancel(self.timer_id)
-            self.timer_id = None
-
-        if self.button_active_id:
-            self.root.after_cancel(self.button_active_id)
-            self.button_active_id = None
-
-        self.buttons_active = False
-        self.first_warning_id = None
-
-        self.start_button.config(state=tk.NORMAL, bg=self.button_colors["start"]["normal"])
-        self.reset_button.config(state=tk.NORMAL, bg=self.button_colors["reset"]["normal"])
-        self.stop_button.config(state=tk.DISABLED, bg=self.button_colors["stop"]["disabled"])
-
-        # Enabled edit the timer
-        self.minutes_entry.config(state="normal")
-        self.seconds_entry.config(state="normal")
-    
-        
-        if self.running:
-            self.insert_log("Timer stopped")
-        else:
-            if self.intro_id:
-                self.insert_log("Cancelling intro", "red")
-                self.root.after_cancel(self.intro_id)
-                self.intro_id = None
-
-            if not self.first_warning_id:
-                minutes = self.time_left // 60
-                seconds = self.time_left % 60
-                self.insert_log(f"Round Over! - Timer: {self.minutes_entry.get()}:{self.seconds_entry.get()}", "orange")
-                
-            mixer.music.load("./sounds/Towel.mp3")
             mixer.music.play()
 
     def validate_time_entry(self, new_value):
@@ -369,7 +301,7 @@ class CountdownApp:
         self.trace_log.yview(tk.END)  
     
     def activate_button(self):
-        #self.insert_log("Dead Buttons are now activated!", "orange")
+        self.insert_log("Dead Buttons are now activated!", "orange")
         self.button_active_id = None
         self.buttons_active = True
 
@@ -401,34 +333,40 @@ class CountdownApp:
         while self.serial_connection and self.serial_connection.is_open:
             try:
                 data = self.serial_connection.readline().strip().decode("utf-8")
-                #self.insert_log(data, "yellow")
+                self.insert_log(data, "yellow")
                 
-                if data == "TowelForks" or data == "TowelTunnel":
+                if data == "Left" or data == "Right":
                     if self.buttons_active:
                         if not self.first_warning_id:
                             self.insert_log(f"{data.upper()} button has been clicked!", "purple")
-                            self.towel_stop()
-                        else:
-                            self.insert_log(f"{data.upper()} tried click button but it already has been clicked!", "red")
-                            
-                if data == "BuzzerForks" or data == "BuzzerTunnel":
-                    if self.buttons_active:
-                        if not self.first_warning_id:
-                            self.insert_log(f"{data.upper()} button has been clicked!", "purple")
-                            self.buzzer_stop()
+                            self.play_first_warning()
                         else:
                             self.insert_log(f"{data.upper()} tried click button but it already has been clicked!", "red")
 
+                    else:
+                        self.insert_log(f"{data.upper()} button has been clicked but buttons are not yet active!", "purple")
+                        
                 if data == "Start" and not self.running and not self.intro_running:
                     self.reset_timer()
                     self.play_intro()
                     self.insert_log(f"Started from Practice Buttons!", "green")
-                
                     
+                if data == "End" and (self.running or self.intro_running):
+                    self.stop_timer()
+                    self.insert_log(f"Ended from Practice Buttons!", "red")
+                
             except Exception as e:
                 self.insert_log(f"Error: {e}", "red")
                 break
 
+    def play_first_warning(self):
+        self.insert_log("Playing first warning", "orange")
+        self.insert_log("Round will end in " + str(Config.DEAD_BUZZER_TIMER) + " seconds!", "orange")
+
+        mixer.music.load("./sounds/DeadBuzzerEdit.mp3")
+        mixer.music.play()
+
+        self.first_warning_id = self.root.after(Config.DEAD_BUZZER_TIMER*1000, self.stop_timer)
 
 
 if __name__ == "__main__":
